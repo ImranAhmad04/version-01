@@ -1,0 +1,6 @@
+{
+  "name": "TheKidsNest",
+  "description": "A clean, responsive diaper landing page and ordering platform with seamless COD checkout and WhatsApp confirmation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,188 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile document containing roles and registration timestamp.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique user ID (matches Firebase Auth UID)"
+        },
+        "email": {
+          "type": "string",
+          "description": "User login email address"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "admin"],
+          "description": "Access privileges of the user"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User's display name"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of user creation"
+        }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "InboxMessage": {
+      "title": "InboxMessage",
+      "description": "A read-only notification sent by administrators to specific user inboxes.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique message identifier"
+        },
+        "text": {
+          "type": "string",
+          "description": "Message content in Bengali or English"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the message was sent"
+        },
+        "senderEmail": {
+          "type": "string",
+          "description": "Email address of the administrator who dispatched this message"
+        }
+      },
+      "required": ["id", "text", "createdAt", "senderEmail"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase transaction record including status and items list.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique order identifier"
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the registered user, or 'guest' if purchased without signing in"
+        },
+        "items": {
+          "type": "array",
+          "description": "List of cart items included in this order"
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Name of the shipping recipient"
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Contact phone number of the customer"
+        },
+        "shippingAddress": {
+          "type": "string",
+          "description": "Physical destination address for Cash on Delivery"
+        },
+        "deliveryDistrict": {
+          "type": "string",
+          "description": "Sylhet or outside Sylhet shipping zones"
+        },
+        "deliveryFee": {
+          "type": "number",
+          "description": "Shipping cost based on district (৳50 or ৳150)"
+        },
+        "totalPrice": {
+          "type": "number",
+          "description": "Total purchase cost in BDT"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "accepted", "declined"],
+          "description": "The administrative operational status of this order"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the order was placed"
+        }
+      },
+      "required": ["id", "userId", "items", "customerName", "customerPhone", "shippingAddress", "deliveryDistrict", "deliveryFee", "totalPrice", "status", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Customizable product catalog overriding or extending the default list.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the product"
+        },
+        "name": {
+          "type": "string",
+          "description": "Readable display title"
+        },
+        "brand": {
+          "type": "string",
+          "description": "Manufacturer name"
+        },
+        "size": {
+          "type": "string",
+          "description": "Diaper size letter representation (e.g. S, M, L, XL)"
+        },
+        "qtyNumber": {
+          "type": "number",
+          "description": "Total quantity in kilograms for finder match"
+        },
+        "count": {
+          "type": "number",
+          "description": "Pack size in units (e.g., 42 pcs)"
+        },
+        "mrp": {
+          "type": "number",
+          "description": "Retail price in BDT"
+        },
+        "imageColor": {
+          "type": "string",
+          "description": "Backup gradient design classes"
+        },
+        "image": {
+          "type": "string",
+          "description": "Custom image URL or base64 data"
+        },
+        "badge": {
+          "type": "string",
+          "description": "Discount or feature ribbon indicator"
+        },
+        "style": {
+          "type": "string",
+          "enum": ["pant", "belt"],
+          "description": "diaper structure category"
+        },
+        "weightRange": {
+          "type": "string",
+          "description": "Textual baby weight recommendation"
+        }
+      },
+      "required": ["id", "name", "brand", "size", "mrp", "style"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles database"
+    },
+    "/users/{userId}/inbox/{messageId}": {
+      "schema": "InboxMessage",
+      "description": "Direct administrative inbox items delivered to users"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Purchase transaction submissions"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Dynamically added or adjusted product listings"
+    }
+  }
+}

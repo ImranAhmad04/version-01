@@ -1,0 +1,34 @@
+/**
+ * @file index.css
+ * @description Global stylesheet configuration for TheKidsNest.
+ * @purpose Imports Tailwind CSS utility classes and loads elegant Google web fonts (Inter and Space Grotesk) to convey a premium baby-care aesthetic.
+ * @interaction Automatically loaded by Vite during development and production compiling.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Pair primary sans font family to Inter */
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  
+  /* Pair display elements to Space Grotesk */
+  --font-display: "Space Grotesk", sans-serif;
+}
+
+/* Custom micro-animations for high quality visual delight */
+@keyframes scale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.animate-scale {
+  animation: scale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Smooth scroll behaviors */
+html {
+  scroll-behavior: smooth;
+}

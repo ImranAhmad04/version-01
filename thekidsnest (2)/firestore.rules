@@ -1,0 +1,122 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for common security scenarios
+
+    // Checks if the requester has a signed-in session
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Checks if the requester's UID matches the specified userId
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Checks if the requester has an admin role in the users collection
+    function isAdmin() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    // Enforces IDs to strictly follow a safe regex pattern to block directory traversal or SQLi
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Enforces valid user entity schema
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'email', 'role']) &&
+             data.keys().size() <= 6 &&
+             data.id is string && data.id.size() > 0 &&
+             data.email is string && data.email.size() > 0 &&
+             data.role in ['user', 'admin'];
+    }
+
+    // Enforces valid message entity schema
+    function isValidInboxMessage(data) {
+      return data.keys().hasAll(['id', 'text', 'createdAt', 'senderEmail']) &&
+             data.keys().size() <= 5 &&
+             data.id is string && data.id.size() > 0 &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 2000 &&
+             data.createdAt is string &&
+             data.senderEmail is string;
+    }
+
+    // Enforces valid product entity schema
+    function isValidProduct(data) {
+      return data.keys().hasAll(['id', 'name', 'brand', 'size', 'mrp', 'style']) &&
+             data.keys().size() <= 15 &&
+             data.id is string &&
+             data.name is string && data.name.size() > 0 &&
+             data.brand is string &&
+             data.size is string &&
+             data.mrp is number && data.mrp >= 0 &&
+             data.style in ['pant', 'belt'];
+    }
+
+    // Enforces valid order entity schema
+    function isValidOrder(data) {
+      return data.keys().hasAll(['id', 'userId', 'items', 'customerName', 'customerPhone', 'shippingAddress', 'deliveryDistrict', 'deliveryFee', 'totalPrice', 'status', 'createdAt']) &&
+             data.keys().size() <= 13 &&
+             data.id is string &&
+             data.userId is string &&
+             data.items is list && data.items.size() > 0 && data.items.size() <= 50 &&
+             data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 256 &&
+             data.customerPhone is string && data.customerPhone.size() >= 5 && data.customerPhone.size() <= 20 &&
+             data.shippingAddress is string && data.shippingAddress.size() > 0 && data.shippingAddress.size() <= 1000 &&
+             data.deliveryDistrict is string &&
+             data.deliveryFee is number && data.deliveryFee >= 0 &&
+             data.totalPrice is number && data.totalPrice >= 0 &&
+             data.status in ['pending', 'accepted', 'declined'] &&
+             data.createdAt is string;
+    }
+
+    // 1. Users collection rules
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      // Allow list of users ONLY to administrators
+      allow list: if isAdmin();
+      
+      // Creating or updating must match valid schema and only allow user-owned creation (unless admin is altering it)
+      allow create: if (isOwner(userId) && isValidUser(request.resource.data)) || isAdmin();
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isAdmin();
+      allow delete: if isAdmin();
+
+      // Subcollection: Inbox messages for specific users
+      match /inbox/{messageId} {
+        allow get, list: if isOwner(userId) || isAdmin();
+        
+        // Only admin can write to user inboxes (send, delete, edit messages)
+        allow create: if isAdmin() && isValidInboxMessage(request.resource.data) && isValidId(messageId);
+        allow update: if isAdmin() && isValidInboxMessage(request.resource.data) && isValidId(messageId);
+        allow delete: if isAdmin();
+      }
+    }
+
+    // 2. Products collection rules (Publicly visible, admin mutable)
+    match /products/{productId} {
+      allow get, list: if true;
+      allow create: if isAdmin() && isValidProduct(request.resource.data) && isValidId(productId);
+      allow update: if isAdmin() && isValidProduct(request.resource.data) && isValidId(productId);
+      allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    // 3. Orders collection rules (Submitted by anyone, viewed by owner or admin, state updated by admin)
+    match /orders/{orderId} {
+      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 100); // Admin can read all; users can query with filters
+      
+      // Anyone can place an order, but if they claim a userId it must be themselves
+      allow create: if isValidId(orderId) && 
+                       isValidOrder(request.resource.data) &&
+                       (request.resource.data.userId == "guest" || isOwner(request.resource.data.userId));
+                       
+      // Admins can update/delete; users cannot touch orders once placed
+      allow update: if isAdmin() && isValidOrder(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}
